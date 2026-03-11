@@ -5,12 +5,14 @@ class ProfileMenuItem {
   final IconData icon;
   final Color? iconColor;
   final String title;
+  final Color? titleColor;
   final VoidCallback onTap;
 
   const ProfileMenuItem({
     required this.icon,
     this.iconColor,
     required this.title,
+    this.titleColor,
     required this.onTap,
   });
 }
@@ -38,7 +40,8 @@ class ProfileMenuCard extends StatelessWidget {
                     color: item.iconColor ?? Colors.black87, size: 22),
                 title: Text(
                   item.title,
-                  style: const TextStyle(fontSize: 15),
+                  style: TextStyle(
+                      fontSize: 15, color: item.titleColor ?? Colors.black87),
                 ),
                 trailing: Icon(Icons.chevron_right,
                     color: AppTheme.greyText, size: 22),

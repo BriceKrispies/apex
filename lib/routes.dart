@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'auth/auth_notifier.dart';
+import 'auth/auth_state.dart';
+import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/jobs_screen.dart';
 import 'screens/messages_screen.dart';
@@ -11,10 +14,54 @@ import 'screens/shell_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
+// Routes that require an authenticated user.
+// Public routes (/home, /jobs, /jobs/:id, /auth) are NOT in this list.
+const _protectedPrefixes = [
+  '/profile',
+  '/messages',
+  '/jobs/post',
+  '/providers/hire',
+  '/truckers/hire',
+  '/provider/onboarding',
+];
+
+bool _isProtected(String location) =>
+    _protectedPrefixes.any((p) => location.startsWith(p));
+
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/home',
+
+  // The router re-evaluates its redirect whenever authNotifier fires.
+  refreshListenable: authNotifier,
+
+  redirect: (context, state) {
+    final loc = state.matchedLocation;
+    final authState = authNotifier.value;
+    final isOnAuth = loc == '/auth';
+
+    // Don't redirect while the initial session restore is in progress.
+    if (authState is AuthStateLoading) return null;
+
+    final isSignedIn = authState is AuthStateSignedIn;
+
+    // Signed-out user trying to reach a protected route → send to auth.
+    if (!isSignedIn && _isProtected(loc) && !isOnAuth) return '/auth';
+
+    // Already signed-in user landing on the auth screen → send home.
+    if (isSignedIn && isOnAuth) return '/home';
+
+    return null;
+  },
+
   routes: [
+    // Auth screen — outside the shell so it has no bottom nav.
+    GoRoute(
+      path: '/auth',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const AuthScreen(),
+    ),
+
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return ShellScreen(navigationShell: navigationShell);
@@ -54,6 +101,7 @@ final GoRouter appRouter = GoRouter(
         ),
       ],
     ),
+
     GoRoute(
       path: '/profile/settings',
       parentNavigatorKey: _rootNavigatorKey,
